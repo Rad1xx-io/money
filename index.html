@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Журнал денег</title>
+<meta name="theme-color" content="#0A0C11">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Деньги">
+<meta name="format-detection" content="telephone=no">
+<meta name="robots" content="noindex">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Unbounded:wght@500;600&display=swap">
+<style>
+/* Layout: one dark phone column with two tabs — "Записать" (balance hero, quick-add, category bars) and "По дням" (day ledger with balance before → after each entry) */
+:root {
+  color-scheme: dark;
+  --bg: #0A0C11;
+  --surface: #13161E;
+  --raised: #1B1F2A;
+  --line: #262B38;
+  --ink: #ECEEF5;
+  --muted: #8B92A5;
+  --faint: #4A5163;
+  --accent: #93A6FF;
+  --accent-ink: #0A0C11;
+  --out: #FF7B67;
+  --in: #5ED49B;
+  --inv: #B898FF;
+  --before: #5ED49B;
+  --after: #F2D04B;
+  --v-ok: #5ED49B;
+  --v-unsure: #8FB4E8;
+  --v-risk: #FF9B4A;
+  --v-waste: #FF5C7A;
+  --font-display: "Unbounded", "Manrope", system-ui, sans-serif;
+  --font-body: "Manrope", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r: 18px;
+}
+* { box-sizing: border-box; }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; -webkit-text-size-adjust: 100%; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+html { background: var(--bg); }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 14px 48px;
+}
+.wrap { max-width: 540px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.wrap > * { min-width: 0; }
+html, body { overflow-x: clip; }
+button, a { font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* header + tabs */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 2px 2px 0; }
+.brand { font-family: var(--font-display); font-weight: 600; font-size: 14px; letter-spacing: .02em; color: var(--muted); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.month { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+.month span { min-width: 104px; text-align: center; font-weight: 700; white-space: nowrap; padding: 0 4px; }
+.iconbtn { width: 36px; height: 36px; border-radius: 12px; border: 0; background: var(--surface); display: grid; place-items: center; font-size: 20px; line-height: 1; color: var(--muted); }
+.iconbtn:hover { color: var(--ink); }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 4px; gap: 4px; }
+.tabs a { text-align: center; text-decoration: none; color: var(--muted); font-weight: 800; padding: 10px 4px; border-radius: 10px; }
+.tabs a[aria-current="page"] { background: var(--raised); color: var(--ink); }
+
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); font-weight: 700; }
+
+/* hero */
+.hero { background: radial-gradient(120% 90% at 100% 0%, rgba(147, 166, 255, .14), transparent 60%), var(--surface); gap: 14px; }
+.left { display: flex; flex-direction: column; gap: 4px; }
+.big { font-family: var(--font-display); font-weight: 600; font-size: 38px; line-height: 1.05; letter-spacing: -.02em; }
+.big.neg { color: var(--out); }
+.split { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--raised); gap: 2px; }
+.split i { display: block; height: 100%; }
+.split .s-out { background: var(--out); } .split .s-inv { background: var(--inv); } .split .s-left { background: var(--in); }
+.tri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.tri div { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.tri small { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+.tri small::before { content: ""; width: 8px; height: 8px; border-radius: 2px; }
+.tri .in small::before { background: var(--in); } .tri .out small::before { background: var(--out); } .tri .inv small::before { background: var(--inv); }
+.tri b { font-size: 15.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.verdicts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.vbox { background: var(--raised); border-radius: 12px; padding: 8px 11px; display: flex; flex-direction: column; min-width: 0; }
+.vbox small { font-size: 12px; font-weight: 700; }
+.vbox b { font-size: 15px; font-weight: 800; }
+.vbox.waste small { color: var(--v-waste); } .vbox.risk small { color: var(--v-risk); }
+.hint { font-size: 12.5px; color: var(--muted); }
+
+/* form */
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--bg); border-radius: 13px; padding: 4px; gap: 4px; }
+.seg button { border: 0; background: transparent; border-radius: 10px; padding: 9px 4px; font-weight: 700; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--raised); color: var(--ink); }
+.seg button[data-type="expense"][aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--out); }
+.seg button[data-type="income"][aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--in); }
+.seg button[data-type="invest"][aria-pressed="true"] { box-shadow: inset 0 -2px 0 var(--inv); }
+.amount { display: flex; align-items: baseline; gap: 8px; padding: 6px 2px 8px; border-bottom: 1px solid var(--line); }
+.amount:focus-within { border-color: var(--accent); }
+.amount input { flex: 1; width: 100%; min-width: 0; border: 0; background: transparent; color: var(--ink); font-family: var(--font-display); font-size: 40px; font-weight: 500; padding: 0; outline: none; letter-spacing: -.02em; }
+.amount input::placeholder { color: var(--faint); }
+.amount .cur { font-family: var(--font-display); font-size: 26px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--raised); border-radius: 999px; padding: 9px 14px; font-size: 14px; font-weight: 600; color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip.v-ok[aria-pressed="true"] { background: var(--v-ok); border-color: var(--v-ok); }
+.chip.v-unsure[aria-pressed="true"] { background: var(--v-unsure); border-color: var(--v-unsure); }
+.chip.v-risk[aria-pressed="true"] { background: var(--v-risk); border-color: var(--v-risk); }
+.chip.v-waste[aria-pressed="true"] { background: var(--v-waste); border-color: var(--v-waste); }
+.row2 { display: grid; grid-template-columns: minmax(0, 1fr) 148px; gap: 8px; }
+.field { border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 11px 12px; font: inherit; font-size: 16px; width: 100%; min-width: 0; max-width: 100%; }
+input[type="date"].field { -webkit-appearance: none; appearance: none; min-height: 46px; display: block; text-align: left; }
+.field::placeholder { color: var(--faint); }
+.vrow { display: flex; flex-direction: column; gap: 8px; }
+.submit { border: 0; border-radius: 14px; background: var(--accent); color: var(--accent-ink); padding: 15px; font-weight: 800; font-size: 16px; }
+.submit:active { transform: scale(.99); }
+.submit:disabled { opacity: .45; cursor: default; }
+.formfoot { display: flex; gap: 8px; }
+.formfoot .submit { flex: 1; }
+.ghost { border: 1px solid var(--line); background: transparent; border-radius: 14px; padding: 0 16px; font-weight: 700; color: var(--muted); }
+.err { color: var(--out); font-size: 13.5px; font-weight: 600; }
+
+/* categories */
+.bars { display: flex; flex-direction: column; gap: 11px; }
+.bar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; font-size: 14px; }
+.bar span em { font-style: normal; color: var(--muted); }
+.bar .track { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--raised); overflow: hidden; display: flex; }
+.bar .track i { display: block; height: 100%; }
+.cathead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.legend { display: flex; gap: 12px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+
+/* days tab */
+.nowcard { display: flex; flex-direction: column; gap: 10px; }
+.nowrow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.nowrow .big { font-size: 30px; color: var(--after); }
+.startline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13.5px; color: var(--muted); }
+.startline b { color: var(--before); }
+.linkbtn { border: 0; background: none; color: var(--accent); font-weight: 700; padding: 4px 0; }
+.startedit { display: flex; gap: 8px; }
+.startedit .field { flex: 1; }
+.startedit .submit { padding: 10px 16px; font-size: 14px; }
+.keyline { display: flex; gap: 14px; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+.keyline b.g { color: var(--before); } .keyline b.y { color: var(--after); }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.filters .chip { padding: 7px 13px; font-size: 13.5px; }
+.day { display: flex; flex-direction: column; }
+.dayhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 14px 2px 6px; border-bottom: 1px solid var(--line); }
+.dayhead .d { font-weight: 800; font-size: 15px; }
+.dayhead .d em { font-style: normal; color: var(--muted); font-weight: 600; font-size: 13px; }
+.dayhead .s { font-weight: 800; color: var(--out); font-size: 14px; }
+.drow { border-bottom: 1px solid var(--line); }
+.drow:last-child { border-bottom: 0; }
+.dbtn { width: 100%; border: 0; background: transparent; text-align: left; padding: 11px 2px; display: flex; flex-direction: column; gap: 6px; border-radius: 10px; }
+.dbtn[aria-expanded="true"] { background: var(--raised); padding-inline: 10px; }
+.dtop { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: baseline; }
+.dtime { color: var(--muted); font-size: 12.5px; font-weight: 600; min-width: 38px; }
+.dname { font-weight: 700; overflow-wrap: anywhere; }
+.dname small { display: block; color: var(--muted); font-weight: 500; font-size: 12.5px; }
+.damt { font-weight: 800; white-space: nowrap; }
+.damt.income { color: var(--in); } .damt.invest { color: var(--inv); }
+.dbot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding-left: 48px; }
+.dbal { font-size: 13.5px; font-weight: 700; white-space: nowrap; color: var(--faint); }
+.dbal .g { color: var(--before); } .dbal .y { color: var(--after); }
+
+.tag { font-size: 11.5px; font-weight: 800; border-radius: 7px; padding: 2px 8px; white-space: nowrap; }
+.tag.ok { background: rgba(94, 212, 155, .13); color: var(--v-ok); }
+.tag.unsure { background: rgba(143, 180, 232, .14); color: var(--v-unsure); }
+.tag.risk { background: rgba(255, 155, 74, .14); color: var(--v-risk); }
+.tag.waste { background: rgba(255, 92, 122, .14); color: var(--v-waste); }
+.tag.unr { color: var(--muted); border: 1px dashed var(--faint); font-weight: 700; }
+.tag.plain { color: var(--muted); padding: 0; font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 2px 12px; }
+.actions .chip { font-size: 13.5px; padding: 7px 12px; }
+.actions .del { color: var(--out); }
+.actions .del.armed { background: var(--out); border-color: var(--out); color: var(--accent-ink); }
+
+.empty { text-align: center; padding: 26px 8px; color: var(--muted); display: flex; flex-direction: column; gap: 6px; }
+.empty b { color: var(--ink); font-size: 15px; }
+.status { font-size: 13.5px; color: var(--muted); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 11px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; z-index: 20; max-width: calc(100vw - 32px); text-align: center; }
+@media (max-width: 460px) { .row2 { grid-template-columns: 1fr; } .big { font-size: 32px; } .amount input { font-size: 34px; } .tri b { font-size: 14px; } .chip { padding: 8px 12px; } }
+@media (max-width: 380px) { .brand { display: none; } .top { justify-content: center; } .dbot { padding-left: 0; } .big { font-size: 28px; } }
+@media (prefers-reduced-motion: no-preference) { .chip, .seg button, .submit, .dbtn, .tabs a { transition: background .15s, color .15s, border-color .15s, transform .1s; } }
+.backup .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.backup .row > * { flex: 1 1 140px; }
+.backup .ghost { padding: 12px 14px; color: var(--ink); text-align: center; }
+.backup .note { font-size: 13px; color: var(--muted); }
+.backup .note.warn { color: var(--v-risk); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">Журнал денег</div>
+    <div class="month">
+      <button class="iconbtn" id="prevM" aria-label="Предыдущий месяц">‹</button>
+      <span id="monthLbl">—</span>
+      <button class="iconbtn" id="nextM" aria-label="Следующий месяц">›</button>
+    </div>
+  </header>
+
+  <nav class="tabs" aria-label="Разделы">
+    <a href="#" id="tabMain" aria-current="page">Записать</a>
+    <a href="#days" id="tabDays">По дням</a>
+  </nav>
+
+  <div class="status" id="status">Загружаю записи…</div>
+
+  <!-- ===== tab: main ===== -->
+  <div id="viewMain" class="wrap">
+    <section class="card hero" aria-label="Итоги месяца">
+      <div class="left">
+        <span class="label">Осталось за месяц</span>
+        <span class="big num" id="tLeft">0,00 €</span>
+      </div>
+      <div class="split" id="split" aria-hidden="true"></div>
+      <div class="tri num">
+        <div class="in"><small>Пришло</small><b id="tIn">0,00 €</b></div>
+        <div class="out"><small>Потрачено</small><b id="tOut">0,00 €</b></div>
+        <div class="inv"><small>Отложено</small><b id="tInv">0,00 €</b></div>
+      </div>
+      <div class="verdicts num">
+        <div class="vbox waste"><small>Зря</small><b id="vWasteSum">0,00 €</b></div>
+        <div class="vbox risk"><small>Риск</small><b id="vRiskSum">0,00 €</b></div>
+      </div>
+      <div class="hint num" id="unrHint"></div>
+    </section>
+
+    <section class="card" aria-label="Новая запись" id="formCard">
+      <div class="seg" role="group" aria-label="Тип записи">
+        <button id="tyExpense" data-type="expense" aria-pressed="true">Трата</button>
+        <button id="tyIncome" data-type="income" aria-pressed="false">Доход</button>
+        <button id="tyInvest" data-type="invest" aria-pressed="false">Отложил</button>
+      </div>
+      <label class="amount">
+        <input id="amount" inputmode="decimal" autocomplete="off" placeholder="0,00" aria-label="Сумма в евро">
+        <span class="cur">€</span>
+      </label>
+      <div class="chips" id="catChips" role="group" aria-label="Категория"></div>
+      <div class="row2">
+        <input class="field" id="note" placeholder="Что именно (булка, вода, AH…)" autocomplete="off" aria-label="Заметка">
+        <input class="field num" id="date" type="date" aria-label="Дата">
+      </div>
+      <div class="vrow" id="verdictRow">
+        <span class="label">Оценка</span>
+        <div class="chips" id="formVerdicts" role="group" aria-label="Оценка траты"></div>
+      </div>
+      <div class="err" id="formErr" hidden></div>
+      <div class="formfoot">
+        <button class="submit" id="submit">Записать</button>
+        <button class="ghost" id="cancelEdit" hidden>Отмена</button>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Траты по категориям" id="catCard">
+      <div class="cathead">
+        <div class="label">Куда ушли деньги</div>
+        <div class="legend"><span><i style="background:var(--out)"></i>всего</span><span><i style="background:var(--v-risk)"></i>риск</span><span><i style="background:var(--v-waste)"></i>зря</span></div>
+      </div>
+      <div class="bars num" id="bars"></div>
+    </section>
+
+    <section class="card backup" aria-label="Резервная копия">
+      <div class="label">Резервная копия</div>
+      <div class="note" id="backupNote">Записи хранятся только на этом телефоне. Раз в неделю сохраняй копию в «Файлы».</div>
+      <div class="row">
+        <button class="ghost" id="exportBtn" type="button">Сохранить копию</button>
+        <label class="ghost" for="importFile" id="importLbl">Восстановить из копии</label>
+        <input type="file" id="importFile" accept=".json,application/json" hidden>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== tab: days ===== -->
+  <div id="viewDays" class="wrap" hidden>
+    <section class="card nowcard" aria-label="Баланс">
+      <div class="nowrow">
+        <span class="label">Сейчас на руках</span>
+        <span class="big num" id="nowBal">0,00 €</span>
+      </div>
+      <div class="startline num" id="startLine"></div>
+      <div class="startedit" id="startEdit" hidden>
+        <input class="field num" id="startInput" inputmode="decimal" placeholder="Сколько было на старте, €" aria-label="Стартовый баланс">
+        <button class="submit" id="startSave">Сохранить</button>
+      </div>
+      <div class="keyline"><span><b class="g">зелёным</b> — было до</span><span><b class="y">жёлтым</b> — стало после</span></div>
+    </section>
+
+    <section class="card" aria-label="Записи по дням">
+      <div class="filters" role="group" aria-label="Фильтр">
+        <button class="chip" id="fAll" data-f="all" aria-pressed="true">Все</button>
+        <button class="chip" id="fUnr" data-f="unrated" aria-pressed="false">Не оценено</button>
+        <button class="chip" id="fRisk" data-f="risk" aria-pressed="false">Риск</button>
+        <button class="chip" id="fWaste" data-f="waste" aria-pressed="false">Зря</button>
+      </div>
+      <div id="days"></div>
+    </section>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const CATS = {
+  expense: ["Продукты", "Перекус и вода", "Кафе и доставка", "Транспорт", "Другое"],
+  income: ["Зарплата", "Подработка", "Другое"],
+  invest: ["Накопления", "Инвестиции", "Другое"]
+};
+const VERDICTS = [
+  { v: "ok", label: "Нужно", tag: "нужно" },
+  { v: "unsure", label: "Не уверен", tag: "не уверен" },
+  { v: "risk", label: "Риск", tag: "риск" },
+  { v: "waste", label: "Зря", tag: "зря" }
+];
+const MONTHS = ["январь","февраль","март","апрель","май","июнь","июль","август","сентябрь","октябрь","ноябрь","декабрь"];
+const MONTHS_G = ["января","февраля","марта","апреля","мая","июня","июля","августа","сентября","октября","ноября","декабря"];
+const WD = ["вс","пн","вт","ср","чт","пт","сб"];
+const $ = id => document.getElementById(id);
+
+const pad = n => String(n).padStart(2, "0");
+const ymd = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+const todayStr = () => ymd(new Date());
+const fmt = c => (c / 100).toLocaleString("ru-RU", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+const fmtS = c => (c < 0 ? "−" : "") + fmt(Math.abs(c));
+function parseAmount(s) {
+  const t = String(s).replace(/\s/g, "").replace(",", ".");
+  if (!/^\d+(\.\d{0,2})?$/.test(t)) return NaN;
+  return Math.round(parseFloat(t) * 100);
+}
+function plural(n, a, b, c) { const m10 = n % 10, m100 = n % 100; if (m10 === 1 && m100 !== 11) return a; if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return b; return c; }
+function vInfo(v) { return VERDICTS.find(x => x.v === v); }
+
+let state = {
+  entries: [], start: null, month: todayStr().slice(0, 7),
+  type: "expense", cat: null, verdict: "", editing: null,
+  filter: "all", open: null, armed: null, canWrite: true, loaded: false, editStart: false
+};
+let col = null, settingsRef = null;
+
+function setStatus(msg) { const el = $("status"); if (msg) { el.textContent = msg; el.hidden = false; } else el.hidden = true; }
+let toastT;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 1800); }
+
+/* ---------- tabs ---------- */
+function view() { return location.hash === "#days" ? "days" : "main"; }
+function applyView() {
+  const v = view();
+  $("viewMain").hidden = v !== "main"; $("viewDays").hidden = v !== "days";
+  $("tabMain").toggleAttribute("aria-current", v === "main"); if (v === "main") $("tabMain").setAttribute("aria-current", "page");
+  $("tabDays").toggleAttribute("aria-current", v === "days"); if (v === "days") $("tabDays").setAttribute("aria-current", "page");
+}
+$("tabMain").onclick = e => { e.preventDefault(); if (location.hash) history.replaceState(null, "", location.pathname + location.search); applyView(); render(); };
+window.addEventListener("hashchange", () => { applyView(); render(); });
+
+/* ---------- form ---------- */
+function renderForm() {
+  ["tyExpense", "tyIncome", "tyInvest"].forEach(id => { const b = $(id); b.setAttribute("aria-pressed", String(b.dataset.type === state.type)); });
+  const box = $("catChips"); box.textContent = "";
+  const cats = CATS[state.type].slice();
+  if (state.cat && !cats.includes(state.cat)) cats.splice(cats.length - 1, 0, state.cat);
+  cats.forEach((c, i) => {
+    const b = document.createElement("button");
+    b.className = "chip"; b.type = "button"; b.id = "cat-" + state.type + "-" + i;
+    b.textContent = c; b.setAttribute("aria-pressed", String(state.cat === c));
+    b.onclick = () => { state.cat = c; hideErr(); renderForm(); };
+    box.appendChild(b);
+  });
+  $("verdictRow").hidden = state.type !== "expense";
+  const vb = $("formVerdicts"); vb.textContent = "";
+  [{ v: "", label: "Оценю потом" }].concat(VERDICTS).forEach(x => {
+    const b = document.createElement("button");
+    b.type = "button"; b.id = "fv-" + (x.v || "none"); b.className = "chip" + (x.v ? " v-" + x.v : "");
+    b.textContent = x.label; b.setAttribute("aria-pressed", String(state.verdict === x.v));
+    b.onclick = () => { state.verdict = x.v; renderForm(); };
+    vb.appendChild(b);
+  });
+  $("submit").textContent = state.editing ? "Сохранить" : "Записать";
+  $("cancelEdit").hidden = !state.editing;
+  $("submit").disabled = !state.canWrite;
+}
+function showErr(m) { const e = $("formErr"); e.textContent = m; e.hidden = false; }
+function hideErr() { $("formErr").hidden = true; }
+function resetForm(keepType) {
+  state.editing = null; state.cat = null; state.verdict = "";
+  if (!keepType) state.type = "expense";
+  $("amount").value = ""; $("note").value = ""; $("date").value = todayStr();
+  hideErr(); renderForm();
+}
+
+document.querySelectorAll(".seg button").forEach(b => b.onclick = () => {
+  if (state.type !== b.dataset.type) { state.type = b.dataset.type; state.cat = null; state.verdict = ""; }
+  hideErr(); renderForm();
+});
+$("cancelEdit").onclick = () => resetForm(false);
+$("amount").addEventListener("keydown", e => { if (e.key === "Enter") $("note").focus(); });
+$("note").addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+$("submit").onclick = submit;
+
+let busy = false;
+async function submit() {
+  if (busy) return;
+  const cents = parseAmount($("amount").value);
+  if (!(cents > 0)) { showErr("Впиши сумму, например 1,25"); $("amount").focus(); return; }
+  if (!state.cat) { showErr("Выбери категорию"); return; }
+  const date = $("date").value || todayStr();
+  const body = {
+    type: state.type, cat: state.cat, amount: cents,
+    note: $("note").value.trim().slice(0, 200), date,
+    verdict: state.type === "expense" ? (state.verdict || null) : null,
+    createdAt: Date.now()
+  };
+  busy = true; $("submit").disabled = true;
+  try {
+    if (state.editing) {
+      const orig = state.entries.find(e => e.id === state.editing);
+      if (orig && orig.createdAt) body.createdAt = orig.createdAt;
+      await col.doc(state.editing).set(body);
+      toast("Сохранено");
+    } else {
+      await col.doc().set(body);
+      toast((state.type === "income" ? "+" : "−") + fmt(cents) + " записано");
+    }
+    state.month = date.slice(0, 7);
+    resetForm(true);
+    render();
+  } catch (e) { writeError(e); }
+  finally { busy = false; $("submit").disabled = !state.canWrite; }
+}
+function writeError(e) {
+  const code = e && e.code;
+  if (code === "quota_exceeded") showErr("Память браузера заполнена. Сохрани копию и удали старые записи.");
+  else showErr("Не получилось сохранить. Закрой и открой журнал, потом попробуй ещё раз.");
+}
+
+/* ---------- start balance ---------- */
+$("startSave").onclick = saveStart;
+$("startInput").addEventListener("keydown", e => { if (e.key === "Enter") saveStart(); });
+async function saveStart() {
+  const t = $("startInput").value.trim().replace(/^-/, "");
+  const neg = $("startInput").value.trim().startsWith("-");
+  const c = t === "" ? 0 : parseAmount(t);
+  if (!(c >= 0)) { toast("Впиши сумму, например 250,00"); return; }
+  if (!settingsRef) return;
+  try { await settingsRef.set({ startBalance: neg ? -c : c }); state.editStart = false; toast("Старт сохранён"); render(); }
+  catch (e) { toast("Не сохранилось, попробуй ещё раз"); }
+}
+
+/* ---------- month + filters ---------- */
+function shiftMonth(d) { let [y, m] = state.month.split("-").map(Number); m += d; if (m < 1) { m = 12; y--; } if (m > 12) { m = 1; y++; } state.month = y + "-" + pad(m); state.open = null; render(); }
+$("prevM").onclick = () => shiftMonth(-1);
+$("nextM").onclick = () => shiftMonth(1);
+document.querySelectorAll(".filters .chip").forEach(b => b.onclick = () => { state.filter = b.dataset.f; state.open = null; render(); });
+
+/* ---------- running balance ---------- */
+function balances() {
+  const sorted = state.entries.slice().sort((a, b) => (a.date || "").localeCompare(b.date || "") || (a.createdAt || 0) - (b.createdAt || 0));
+  let bal = state.start || 0; const map = {};
+  sorted.forEach(e => { const before = bal; bal += e.type === "income" ? (e.amount || 0) : -(e.amount || 0); map[e.id] = { before, after: bal }; });
+  return { map, now: bal };
+}
+
+/* ---------- render ---------- */
+function render() {
+  const [y, m] = state.month.split("-").map(Number);
+  $("monthLbl").textContent = MONTHS[m - 1][0].toUpperCase() + MONTHS[m - 1].slice(1) + " " + y;
+  if (view() === "days") renderDays(); else renderMain();
+}
+
+const sum = arr => arr.reduce((s, e) => s + (e.amount || 0), 0);
+const monthEntries = () => state.entries.filter(e => (e.date || "").startsWith(state.month));
+
+function renderMain() {
+  const mon = monthEntries();
+  const inc = sum(mon.filter(e => e.type === "income"));
+  const exp = mon.filter(e => e.type === "expense");
+  const out = sum(exp);
+  const inv = sum(mon.filter(e => e.type === "invest"));
+  const left = inc - out - inv;
+  $("tLeft").textContent = fmtS(left);
+  $("tLeft").classList.toggle("neg", left < 0);
+  $("tIn").textContent = fmt(inc); $("tOut").textContent = fmt(out); $("tInv").textContent = fmt(inv);
+
+  const split = $("split"); split.textContent = "";
+  const base = Math.max(inc, out + inv);
+  if (base > 0) {
+    [["s-out", out], ["s-inv", inv], ["s-left", Math.max(left, 0)]].forEach(([cls, v]) => {
+      if (v <= 0) return; const i = document.createElement("i"); i.className = cls; i.style.flex = String(v / base); split.appendChild(i);
+    });
+  }
+  const pct = v => out > 0 ? " · " + Math.round(v / out * 100) + "%" : "";
+  const w = sum(exp.filter(e => e.verdict === "waste")), r = sum(exp.filter(e => e.verdict === "risk"));
+  $("vWasteSum").textContent = fmt(w) + pct(w);
+  $("vRiskSum").textContent = fmt(r) + pct(r);
+  const unr = exp.filter(e => !e.verdict).length;
+  $("unrHint").textContent = unr ? unr + " " + plural(unr, "трата ждёт", "траты ждут", "трат ждут") + " оценки — во вкладке «По дням»" : (exp.length ? "Все траты месяца оценены" : "");
+
+  const byCat = {};
+  exp.forEach(e => { const c = byCat[e.cat] || (byCat[e.cat] = { t: 0, w: 0, r: 0, n: 0 }); c.t += e.amount; c.n++; if (e.verdict === "waste") c.w += e.amount; if (e.verdict === "risk") c.r += e.amount; });
+  const cats = Object.entries(byCat).sort((a, b) => b[1].t - a[1].t);
+  const bars = $("bars"); bars.textContent = "";
+  $("catCard").hidden = !cats.length;
+  const max = cats.length ? cats[0][1].t : 1;
+  cats.forEach(([name, c]) => {
+    const row = document.createElement("div"); row.className = "bar";
+    const l = document.createElement("span"); l.textContent = name + " ";
+    const n = document.createElement("em"); n.textContent = "· " + c.n; l.appendChild(n);
+    const rr = document.createElement("b"); rr.textContent = fmt(c.t);
+    const tr = document.createElement("div"); tr.className = "track";
+    [["var(--out)", c.t - c.w - c.r], ["var(--v-risk)", c.r], ["var(--v-waste)", c.w]].forEach(([col, v]) => {
+      if (v <= 0) return; const i = document.createElement("i"); i.style.background = col; i.style.width = (v / max * 100) + "%"; tr.appendChild(i);
+    });
+    row.append(l, rr, tr); bars.appendChild(row);
+  });
+}
+
+function renderDays() {
+  const { map, now } = balances();
+  $("nowBal").textContent = fmtS(now);
+  const sl = $("startLine"); sl.textContent = "";
+  const span = document.createElement("span");
+  if (state.start === null) span.textContent = "Впиши, сколько денег было, когда начал вести журнал, иначе «было» начнётся с нуля.";
+  else { span.append("Старт журнала: "); const b = document.createElement("b"); b.textContent = fmtS(state.start); span.appendChild(b); }
+  const eb = document.createElement("button"); eb.className = "linkbtn"; eb.type = "button"; eb.id = "startToggle";
+  eb.textContent = state.editStart ? "Отмена" : (state.start === null ? "Указать" : "Изменить");
+  eb.hidden = !state.canWrite;
+  eb.onclick = () => { state.editStart = !state.editStart; if (state.editStart) $("startInput").value = state.start ? (Math.abs(state.start) / 100).toFixed(2).replace(".", ",") : ""; render(); if (state.editStart) $("startInput").focus(); };
+  sl.append(span, eb);
+  $("startEdit").hidden = !state.editStart;
+
+  document.querySelectorAll(".filters .chip").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.f === state.filter)));
+  let rows = monthEntries();
+  if (state.filter === "unrated") rows = rows.filter(e => e.type === "expense" && !e.verdict);
+  if (state.filter === "risk") rows = rows.filter(e => e.verdict === "risk");
+  if (state.filter === "waste") rows = rows.filter(e => e.verdict === "waste");
+  rows = rows.slice().sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.createdAt || 0) - (a.createdAt || 0));
+
+  const box = $("days"); box.textContent = "";
+  if (!rows.length) {
+    const em = document.createElement("div"); em.className = "empty";
+    const b = document.createElement("b"); const s = document.createElement("span");
+    if (!state.loaded) b.textContent = "Загружаю…";
+    else if (!monthEntries().length) { b.textContent = "В этом месяце записей нет"; s.textContent = "Добавь первую трату во вкладке «Записать»."; }
+    else if (state.filter === "unrated") b.textContent = "Всё оценено";
+    else b.textContent = "Под этот фильтр ничего не подходит";
+    em.append(b, s); box.appendChild(em); return;
+  }
+  const groups = [];
+  rows.forEach(e => { const g = groups[groups.length - 1]; if (g && g.date === e.date) g.items.push(e); else groups.push({ date: e.date, items: [e] }); });
+  groups.forEach(g => {
+    const day = document.createElement("div"); day.className = "day";
+    const d = new Date(g.date + "T12:00:00");
+    const head = document.createElement("div"); head.className = "dayhead num";
+    const hl = document.createElement("span"); hl.className = "d";
+    hl.textContent = d.getDate() + " " + MONTHS_G[d.getMonth()] + " ";
+    const wd = document.createElement("em"); wd.textContent = WD[d.getDay()] + (g.date === todayStr() ? " · сегодня" : ""); hl.appendChild(wd);
+    const dayOut = g.items.filter(e => e.type === "expense").reduce((s, e) => s + e.amount, 0);
+    const hr = document.createElement("span"); hr.className = "s"; hr.textContent = dayOut ? "−" + fmt(dayOut) : "";
+    head.append(hl, hr); day.appendChild(head);
+    g.items.forEach(e => day.appendChild(dayRow(e, map[e.id])));
+    box.appendChild(day);
+  });
+}
+
+function dayRow(e, bal) {
+  const wrap = document.createElement("div"); wrap.className = "drow";
+  const btn = document.createElement("button"); btn.className = "dbtn"; btn.type = "button"; btn.id = "d-" + e.id;
+  btn.setAttribute("aria-expanded", String(state.open === e.id));
+
+  const top = document.createElement("div"); top.className = "dtop num";
+  const time = document.createElement("span"); time.className = "dtime";
+  if (e.createdAt) { const c = new Date(e.createdAt); if (ymd(c) === e.date) time.textContent = pad(c.getHours()) + ":" + pad(c.getMinutes()); }
+  const name = document.createElement("span"); name.className = "dname";
+  name.textContent = e.note || e.cat;
+  if (e.note) { const sm = document.createElement("small"); sm.textContent = e.cat; name.appendChild(sm); }
+  const amt = document.createElement("span"); amt.className = "damt " + e.type;
+  amt.textContent = (e.type === "income" ? "+" : e.type === "invest" ? "→ " : "−") + fmt(e.amount);
+  top.append(time, name, amt);
+
+  const bot = document.createElement("div"); bot.className = "dbot num";
+  const tag = document.createElement("span");
+  if (e.type === "expense") {
+    const vi = vInfo(e.verdict);
+    tag.className = "tag " + (vi ? e.verdict : "unr"); tag.textContent = vi ? vi.tag : "оценить";
+  } else { tag.className = "tag plain"; tag.textContent = e.type === "income" ? "доход" : "отложено"; }
+  const b = document.createElement("span"); b.className = "dbal";
+  if (bal) {
+    const g = document.createElement("span"); g.className = "g"; g.textContent = fmtS(bal.before);
+    const yv = document.createElement("span"); yv.className = "y"; yv.textContent = fmtS(bal.after);
+    b.append(g, " → ", yv);
+  }
+  bot.append(tag, b);
+  btn.append(top, bot);
+  btn.onclick = () => { state.open = state.open === e.id ? null : e.id; state.armed = null; render(); };
+  wrap.appendChild(btn);
+
+  if (state.open === e.id && state.canWrite) {
+    const act = document.createElement("div"); act.className = "actions";
+    const mk = (txt, cls, fn, pressed) => { const x = document.createElement("button"); x.type = "button"; x.className = "chip " + (cls || ""); x.textContent = txt; if (pressed !== undefined) x.setAttribute("aria-pressed", String(pressed)); x.onclick = fn; act.appendChild(x); return x; };
+    if (e.type === "expense") VERDICTS.forEach(v => mk(v.label, "v-" + v.v, () => setVerdict(e, e.verdict === v.v ? null : v.v), e.verdict === v.v));
+    mk("Изменить", "", () => startEdit(e));
+    mk(state.armed === e.id ? "Точно удалить?" : "Удалить", "del" + (state.armed === e.id ? " armed" : ""), () => {
+      if (state.armed === e.id) removeEntry(e); else { state.armed = e.id; render(); }
+    });
+    wrap.appendChild(act);
+  }
+  return wrap;
+}
+
+async function setVerdict(e, v) {
+  try { await col.doc(e.id).update({ verdict: v }); }
+  catch (err) { toast(err && err.code === "invalid_argument" ? "Изменять может только владелец" : "Не сохранилось, попробуй ещё раз"); }
+}
+async function removeEntry(e) {
+  try { await col.doc(e.id).delete(); state.open = null; state.armed = null; toast("Удалено"); render(); }
+  catch (err) { toast("Не удалилось, попробуй ещё раз"); }
+}
+function startEdit(e) {
+  state.editing = e.id; state.type = e.type; state.cat = e.cat; state.verdict = e.verdict || "";
+  $("amount").value = (e.amount / 100).toFixed(2).replace(".", ",");
+  $("note").value = e.note || ""; $("date").value = e.date || todayStr();
+  state.open = null; hideErr(); renderForm();
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  applyView(); render();
+  $("formCard").scrollIntoView({ behavior: "smooth", block: "start" });
+  $("amount").focus();
+}
+
+/* ---------- boot ---------- */
+$("date").value = todayStr();
+applyView(); renderForm(); render();
+
+/* ---------- local storage (this phone only) ---------- */
+const STORE_KEY = "moneylog.v1", BACKUP_KEY = "moneylog.lastBackup";
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsSet(k, v) { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } }
+function loadStore() {
+  try { const o = JSON.parse(lsGet(STORE_KEY)); if (o && typeof o.ops === "object") return { ops: o.ops || {}, start: typeof o.start === "number" ? o.start : null }; } catch (e) {}
+  return { ops: {}, start: null };
+}
+let store = loadStore();
+let storageOk = lsSet("moneylog.probe", "1");
+function persist() { if (!lsSet(STORE_KEY, JSON.stringify(store))) throw { code: "quota_exceeded" }; }
+function sync() {
+  state.entries = Object.entries(store.ops).map(([id, d]) => Object.assign({ id }, d));
+  state.start = store.start; state.loaded = true;
+  render(); renderBackup();
+}
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+col = {
+  doc(id) {
+    id = id || newId();
+    return {
+      id,
+      async set(body) { const prev = store.ops[id]; store.ops[id] = JSON.parse(JSON.stringify(body)); try { persist(); } catch (e) { if (prev) store.ops[id] = prev; else delete store.ops[id]; throw e; } sync(); },
+      async update(patch) { if (!store.ops[id]) throw { code: "invalid_argument" }; Object.assign(store.ops[id], patch); persist(); sync(); },
+      async delete() { delete store.ops[id]; persist(); sync(); }
+    };
+  }
+};
+settingsRef = { async set(b) { store.start = typeof b.startBalance === "number" ? b.startBalance : null; persist(); sync(); } };
+window.addEventListener("storage", e => { if (e.key === STORE_KEY) { store = loadStore(); sync(); } });
+
+/* ---------- backup ---------- */
+function renderBackup() {
+  const n = $("backupNote"); const last = Number(lsGet(BACKUP_KEY)) || 0;
+  const cnt = Object.keys(store.ops).length;
+  n.classList.remove("warn");
+  if (!cnt) { n.textContent = "Записи хранятся только на этом телефоне. Раз в неделю сохраняй копию в «Файлы»."; return; }
+  if (!last) { n.textContent = "Копии ещё не было. Сохрани её в «Файлы», чтобы не потерять " + cnt + " " + plural(cnt, "запись", "записи", "записей") + "."; n.classList.add("warn"); return; }
+  const days = Math.floor((Date.now() - last) / 86400000);
+  const d = new Date(last);
+  n.textContent = "Последняя копия: " + d.getDate() + " " + MONTHS_G[d.getMonth()] + (days >= 7 ? " — пора сделать новую." : ".");
+  if (days >= 7) n.classList.add("warn");
+}
+$("exportBtn").onclick = async () => {
+  const data = JSON.stringify({ app: "moneylog", version: 1, exportedAt: new Date().toISOString(), start: store.start, ops: store.ops }, null, 1);
+  const name = "zhurnal-deneg-" + todayStr() + ".json";
+  const file = new File([data], name, { type: "application/json" });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: name });
+    } else {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(file); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+    lsSet(BACKUP_KEY, String(Date.now())); renderBackup(); toast("Копия готова");
+  } catch (e) { if (e && e.name === "AbortError") toast("Копия не сохранена"); else toast("Не получилось сохранить копию"); }
+};
+$("importFile").onchange = async ev => {
+  const f = ev.target.files && ev.target.files[0]; ev.target.value = "";
+  if (!f) return;
+  try {
+    const o = JSON.parse(await f.text());
+    if (!o || o.app !== "moneylog" || typeof o.ops !== "object") throw 0;
+    let added = 0;
+    Object.entries(o.ops).forEach(([id, d]) => {
+      if (d && typeof d.amount === "number" && d.type && d.date) { if (!store.ops[id]) added++; store.ops[id] = d; }
+    });
+    if (typeof o.start === "number") store.start = o.start;
+    persist(); sync();
+    toast(added ? "Восстановлено: " + added + " " + plural(added, "запись", "записи", "записей") : "Все записи из копии уже есть");
+  } catch (e) { toast(e && e.code === "quota_exceeded" ? "Не хватило памяти браузера" : "Это не файл копии журнала"); }
+};
+
+/* ---------- start ---------- */
+setStatus(storageOk ? null : "Браузер не даёт сохранять данные (возможно, частный режим). Открой журнал с иконки на экране «Домой».");
+sync();
+if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+if ("serviceWorker" in navigator) window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
